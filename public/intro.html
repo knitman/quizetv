@@ -1,1 +1,28 @@
-<html><body><h1>Intro</h1></body></html>
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<title>Start</title>
+</head>
+<body style="background:#081c3a;color:gold;text-align:center">
+<h1>Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ</h1>
+<img id="qr" width="200">
+<br><br>
+<button id="start">START GAME</button>
+
+<script>
+const ws = new WebSocket(
+  (location.protocol==="https:"?"wss://":"ws://")+location.host
+);
+
+ws.onmessage = e => {
+  const d = JSON.parse(e.data);
+  if (d.qr) document.getElementById("qr").src = d.qr;
+};
+
+document.getElementById("start").onclick = () => {
+  ws.send(JSON.stringify({ type:"admin_start" }));
+};
+</script>
+</body>
+</html>
