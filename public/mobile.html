@@ -1,1 +1,50 @@
-<html><body><h1>Controller</h1></body></html>
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controller</title>
+<style>
+body{background:#081c3a;color:gold;text-align:center;font-family:Arial}
+button{width:80%;padding:18px;font-size:24px;margin:10px}
+</style>
+</head>
+<body>
+
+<h1>Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ</h1>
+
+<input id="name" placeholder="Όνομα">
+<button onclick="join()">ΜΠΕΣ</button>
+
+<div id="game" style="display:none">
+<button onclick="send(0)">Α</button>
+<button onclick="send(1)">Β</button>
+<button onclick="send(2)">Γ</button>
+<button onclick="send(3)">Δ</button>
+</div>
+
+<script>
+const ws = new WebSocket(
+  (location.protocol==="https:"?"wss://":"ws://")+location.host
+);
+let answered=false;
+
+function join(){
+  ws.send(JSON.stringify({type:"join",name:name.value}));
+  game.style.display="block";
+}
+
+function send(a){
+  if(answered) return;
+  answered=true;
+  ws.send(JSON.stringify({type:"answer",answer:a}));
+}
+
+ws.onmessage=e=>{
+  const d=JSON.parse(e.data);
+  if(d.type==="question") answered=false;
+};
+</script>
+
+</body>
+</html>
