@@ -2,46 +2,92 @@ import express from "express";
 import http from "http";
 import { WebSocketServer } from "ws";
 import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import QRCode from "qrcode";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
+
 const PORT = process.env.PORT || 8080;
 
-app.use(express.static("public"));
+/* =========================
+   STATIC FILES
+========================= */
+app.use(express.static(path.join(__dirname, "public")));
 
-const questions = JSON.parse(fs.readFileSync("questions.json"));
+/* ROOT -> intro video */
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "intro-video.html"));
+});
+
+/* =========================
+   GAME STATE
+========================= */
+const questions = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "questions.json"), "utf-8")
+);
+
 let qIndex = 0;
-let answers = [];
-let startTime = 0;
 let gameStarted = false;
+let startTime = 0;
+let answers = [];
 
-const players = new Map();
-let qrUrl = "";
+const players = new Map(); // ws -> { name, score }
+let qrDataUrl = "";
 
-QRCode.toDataURL("REPLACE_WITH_RENDER_URL/mobile.html")
-  .then(url => qrUrl = url);
+/* =========================
+   QR CODE (dynamic URL)
+========================= */
+const BASE_URL =
+  process.env.RENDER_EXTERNAL_URL ||
+  "http://localhost:" + PORT;
 
+QRCode.toDataURL(`${BASE_URL}/mobile.html`).then(url => {
+  qrDataUrl = url;
+});
+
+/* =========================
+   HELPERS
+========================= */
 function broadcast(data) {
-  wss.clients.forEach(c => c.readyState === 1 && c.send(JSON.stringify(data)));
+  const msg = JSON.stringify(data);
+  wss.clients.forEach(c => {
+    if (c.readyState === 1) c.send(msg);
+  });
 }
 
+/* =========================
+   WEBSOCKETS
+========================= */
 wss.on("connection", ws => {
-  ws.on("message", msg => {
-    const data = JSON.parse(msg);
 
+  ws.on("message", raw => {
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      return;
+    }
+
+    /* JOIN */
     if (data.type === "join") {
       players.set(ws, { name: data.name, score: 0 });
       broadcast({ type: "players", players: [...players.values()] });
     }
 
+    /* ADMIN START */
     if (data.type === "admin_start" && !gameStarted) {
       gameStarted = true;
       nextQuestion();
     }
 
-    if (data.type === "answer") {
+    /* ANSWER */
+    if (data.type === "answer" && gameStarted) {
       answers.push({
         ws,
         answer: data.answer,
@@ -49,11 +95,22 @@ wss.on("connection", ws => {
       });
     }
   });
+
+  ws.on("close", () => {
+    players.delete(ws);
+    broadcast({ type: "players", players: [...players.values()] });
+  });
 });
 
+/* =========================
+   GAME FLOW
+========================= */
 function nextQuestion() {
   if (qIndex >= questions.length) {
-    broadcast({ type: "end", players: [...players.values()] });
+    broadcast({
+      type: "end",
+      players: [...players.values()]
+    });
     return;
   }
 
@@ -64,7 +121,7 @@ function nextQuestion() {
     type: "question",
     question: questions[qIndex],
     index: qIndex + 1,
-    qr: qrUrl
+    qr: qrDataUrl
   });
 
   qIndex++;
@@ -75,17 +132,29 @@ function evaluateAnswers() {
   const q = questions[qIndex - 1];
   const correct = answers.filter(a => a.answer === q.correct);
 
-  if (correct.length) {
-    correct.forEach(a => players.get(a.ws).score += 1);
-    const fastest = correct.sort((a,b)=>a.time-b.time)[0];
+  if (correct.length > 0) {
+    /* όλοι οι σωστοί +1 */
+    correct.forEach(a => {
+      players.get(a.ws).score += 1;
+    });
+
+    /* πιο γρήγορος +1 */
+    const fastest = correct.sort((a, b) => a.time - b.time)[0];
     players.get(fastest.ws).score += 1;
-    broadcast({ type: "winner", name: players.get(fastest.ws).name });
+
+    broadcast({
+      type: "winner",
+      name: players.get(fastest.ws).name
+    });
   }
 
   broadcast({ type: "players", players: [...players.values()] });
   setTimeout(nextQuestion, 3000);
 }
 
+/* =========================
+   START SERVER
+========================= */
 server.listen(PORT, () => {
-  console.log("Running on port", PORT);
+  console.log("✅ Server running on port", PORT);
 });
