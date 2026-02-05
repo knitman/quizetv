@@ -20,9 +20,9 @@ const PORT = process.env.PORT || 8080;
 ========================= */
 app.use(express.static(path.join(__dirname, "public")));
 
-/* ROOT -> intro video */
+/* ROOT -> intro */
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "intro-video.html"));
+  res.sendFile(path.join(__dirname, "public", "intro.html"));
 });
 
 /* =========================
@@ -41,11 +41,11 @@ const players = new Map(); // ws -> { name, score }
 let qrDataUrl = "";
 
 /* =========================
-   QR CODE (dynamic URL)
+   QR CODE (PUBLIC URL)
 ========================= */
 const BASE_URL =
   process.env.RENDER_EXTERNAL_URL ||
-  "http://localhost:" + PORT;
+  `http://localhost:${PORT}`;
 
 QRCode.toDataURL(`${BASE_URL}/mobile.html`).then(url => {
   qrDataUrl = url;
@@ -66,6 +66,12 @@ function broadcast(data) {
 ========================= */
 wss.on("connection", ws => {
 
+  // ΣΤΕΙΛΕ QR ΜΕ ΤΗ ΣΥΝΔΕΣΗ (για intro / TV)
+  ws.send(JSON.stringify({
+    type: "qr",
+    qr: qrDataUrl
+  }));
+
   ws.on("message", raw => {
     let data;
     try {
@@ -74,19 +80,16 @@ wss.on("connection", ws => {
       return;
     }
 
-    /* JOIN */
     if (data.type === "join") {
       players.set(ws, { name: data.name, score: 0 });
       broadcast({ type: "players", players: [...players.values()] });
     }
 
-    /* ADMIN START */
     if (data.type === "admin_start" && !gameStarted) {
       gameStarted = true;
       nextQuestion();
     }
 
-    /* ANSWER */
     if (data.type === "answer" && gameStarted) {
       answers.push({
         ws,
@@ -120,8 +123,7 @@ function nextQuestion() {
   broadcast({
     type: "question",
     question: questions[qIndex],
-    index: qIndex + 1,
-    qr: qrDataUrl
+    index: qIndex + 1
   });
 
   qIndex++;
@@ -133,12 +135,12 @@ function evaluateAnswers() {
   const correct = answers.filter(a => a.answer === q.correct);
 
   if (correct.length > 0) {
-    /* όλοι οι σωστοί +1 */
+    // όλοι οι σωστοί +1
     correct.forEach(a => {
       players.get(a.ws).score += 1;
     });
 
-    /* πιο γρήγορος +1 */
+    // πιο γρήγορος +1
     const fastest = correct.sort((a, b) => a.time - b.time)[0];
     players.get(fastest.ws).score += 1;
 
