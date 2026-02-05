@@ -1,1 +1,56 @@
-<html><body><h1>Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ</h1></body></html>
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<title>TV</title>
+<style>
+body{background:#081c3a;color:gold;font-family:Arial;text-align:center}
+.answer{border:2px solid gold;margin:10px;padding:15px}
+</style>
+</head>
+<body>
+<h1 id="question"></h1>
+<div id="answers"></div>
+<h2 id="status"></h2>
+<ul id="scores"></ul>
+
+<script>
+const ws = new WebSocket(
+  (location.protocol==="https:"?"wss://":"ws://")+location.host
+);
+
+ws.onmessage = e => {
+  const d = JSON.parse(e.data);
+
+  if (d.type==="question") {
+    question.textContent = d.question.text;
+    answers.innerHTML="";
+    d.question.answers.forEach(a=>{
+      const div=document.createElement("div");
+      div.className="answer";
+      div.textContent=a;
+      answers.appendChild(div);
+    });
+    status.textContent="Απαντούν...";
+  }
+
+  if (d.type==="winner") {
+    status.textContent="Πιο γρήγορος: "+d.name;
+  }
+
+  if (d.type==="players") {
+    scores.innerHTML="";
+    d.players.forEach(p=>{
+      const li=document.createElement("li");
+      li.textContent=`${p.name}: ${p.score}`;
+      scores.appendChild(li);
+    });
+  }
+
+  if (d.type==="end") {
+    status.textContent="ΤΕΛΟΣ ΠΑΙΧΝΙΔΙΟΥ";
+  }
+};
+</script>
+</body>
+</html>
