@@ -20,11 +20,12 @@ let gameStarted = false;
 const players = new Map();
 let qrUrl = "";
 
+QRCode.toDataURL("REPLACE_WITH_RENDER_URL/mobile.html")
+  .then(url => qrUrl = url);
+
 function broadcast(data) {
   wss.clients.forEach(c => c.readyState === 1 && c.send(JSON.stringify(data)));
 }
-
-QRCode.toDataURL("REPLACE_WITH_RENDER_URL/mobile.html").then(url => qrUrl = url);
 
 wss.on("connection", ws => {
   ws.on("message", msg => {
@@ -41,7 +42,11 @@ wss.on("connection", ws => {
     }
 
     if (data.type === "answer") {
-      answers.push({ ws, answer: data.answer, time: Date.now() - startTime });
+      answers.push({
+        ws,
+        answer: data.answer,
+        time: Date.now() - startTime
+      });
     }
   });
 });
@@ -63,10 +68,10 @@ function nextQuestion() {
   });
 
   qIndex++;
-  setTimeout(evaluate, 10000);
+  setTimeout(evaluateAnswers, 10000);
 }
 
-function evaluate() {
+function evaluateAnswers() {
   const q = questions[qIndex - 1];
   const correct = answers.filter(a => a.answer === q.correct);
 
@@ -74,11 +79,13 @@ function evaluate() {
     correct.forEach(a => players.get(a.ws).score += 1);
     const fastest = correct.sort((a,b)=>a.time-b.time)[0];
     players.get(fastest.ws).score += 1;
-    broadcast({ type:"winner", name: players.get(fastest.ws).name });
+    broadcast({ type: "winner", name: players.get(fastest.ws).name });
   }
 
-  broadcast({ type:"players", players: [...players.values()] });
+  broadcast({ type: "players", players: [...players.values()] });
   setTimeout(nextQuestion, 3000);
 }
 
-server.listen(PORT, () => console.log("Running on", PORT));
+server.listen(PORT, () => {
+  console.log("Running on port", PORT);
+});
