@@ -1,1 +1,38 @@
-<html><body><h1>Intro Video</h1></body></html>
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<title>Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ</title>
+<style>
+body {
+  margin:0;
+  background: radial-gradient(circle, #0b2c5d, #020b1c);
+  color: gold;
+  font-family: "Arial Black", Arial, sans-serif;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+h1 {
+  font-size:72px;
+  animation: intro 5s forwards;
+  text-shadow:0 0 30px gold;
+}
+@keyframes intro {
+  0% { opacity:0; transform:scale(0.8); }
+  20% { opacity:1; transform:scale(1); }
+  80% { opacity:1; }
+  100% { opacity:0; }
+}
+</style>
+</head>
+<body>
+<h1>Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ</h1>
+<audio src="sounds/intro.mp3" autoplay></audio>
+<audio src="sounds/intro_voice.mp3" autoplay></audio>
+<script>
+setTimeout(()=>location.href="/intro.html",5000);
+</script>
+</body>
+</html>
