@@ -6,86 +6,83 @@ import path from "path";
 import { fileURLToPath } from "url";
 import QRCode from "qrcode";
 
-/* ===== PATH SETUP ===== */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/* ===== SERVER ===== */
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 const PORT = process.env.PORT || 8080;
 
-/* ===== STATIC ===== */
+/* STATIC */
 app.use(express.static(path.join(__dirname, "public")));
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "intro.html"));
-});
+app.get("/", (req, res) =>
+  res.sendFile(path.join(__dirname, "public", "intro.html"))
+);
 
-/* ===== GAME DATA ===== */
+/* DATA */
 const questions = JSON.parse(
   fs.readFileSync(path.join(__dirname, "questions.json"), "utf-8")
 );
 
 let qIndex = 0;
 let gameStarted = false;
-let startTime = 0;
 let answers = [];
+let startTime = 0;
 
-const players = new Map(); // ws -> { name, score }
+const players = new Map(); 
+// ws -> { name, score, ready }
+
 let qrDataUrl = "";
 
-/* ===== QR CODE ===== */
+/* QR */
 const BASE_URL =
-  process.env.RENDER_EXTERNAL_URL ||
-  `http://localhost:${PORT}`;
+  process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
 
 QRCode.toDataURL(`${BASE_URL}/mobile.html`).then(url => {
   qrDataUrl = url;
 });
 
-/* ===== HELPERS ===== */
+/* HELPERS */
 function broadcast(data) {
   const msg = JSON.stringify(data);
-  wss.clients.forEach(c => {
-    if (c.readyState === 1) c.send(msg);
-  });
+  wss.clients.forEach(c => c.readyState === 1 && c.send(msg));
 }
 
-/* ===== SOCKETS ===== */
+/* SOCKETS */
 wss.on("connection", ws => {
 
-  /* στείλε QR μόλις συνδεθεί client */
-  ws.send(JSON.stringify({
-    type: "qr",
-    qr: qrDataUrl
-  }));
+  ws.send(JSON.stringify({ type: "qr", qr: qrDataUrl }));
 
   ws.on("message", raw => {
     let data;
-    try {
-      data = JSON.parse(raw);
-    } catch {
-      return;
+    try { data = JSON.parse(raw); } catch { return; }
+
+    /* JOIN */
+    if (data.type === "join") {
+      players.set(ws, {
+        name: data.name,
+        score: 0,
+        ready: false
+      });
+      broadcastPlayers();
     }
 
-    /* JOIN PLAYER */
-    if (data.type === "join") {
-      players.set(ws, { name: data.name, score: 0 });
-      broadcast({
-        type: "players",
-        players: [...players.values()]
-      });
+    /* READY */
+    if (data.type === "ready") {
+      const p = players.get(ws);
+      if (p) p.ready = true;
+      broadcastPlayers();
     }
 
     /* ADMIN START */
     if (data.type === "admin_start" && !gameStarted) {
       gameStarted = true;
       qIndex = 0;
-      nextQuestion();
+      startCountdown();
     }
 
-    /* ANSWER FROM MOBILE */
+    /* ANSWER */
     if (data.type === "answer" && gameStarted) {
       answers.push({
         ws,
@@ -93,7 +90,6 @@ wss.on("connection", ws => {
         time: Date.now() - startTime
       });
 
-      /* LIVE FEEDBACK ΣΤΗΝ TV */
       broadcast({
         type: "answer_live",
         answer: data.answer
@@ -103,20 +99,39 @@ wss.on("connection", ws => {
 
   ws.on("close", () => {
     players.delete(ws);
-    broadcast({
-      type: "players",
-      players: [...players.values()]
-    });
+    broadcastPlayers();
   });
 });
 
-/* ===== GAME FLOW ===== */
+/* PLAYERS UPDATE */
+function broadcastPlayers() {
+  broadcast({
+    type: "players",
+    players: [...players.values()]
+  });
+}
+
+/* COUNTDOWN */
+function startCountdown() {
+  let seconds = 5;
+
+  broadcast({ type: "countdown", seconds });
+
+  const timer = setInterval(() => {
+    seconds--;
+    broadcast({ type: "countdown", seconds });
+
+    if (seconds === 0) {
+      clearInterval(timer);
+      nextQuestion();
+    }
+  }, 1000);
+}
+
+/* GAME FLOW */
 function nextQuestion() {
   if (qIndex >= questions.length) {
-    broadcast({
-      type: "end",
-      players: [...players.values()]
-    });
+    broadcast({ type: "end", players: [...players.values()] });
     return;
   }
 
@@ -137,14 +152,9 @@ function evaluateAnswers() {
   const q = questions[qIndex - 1];
   const correct = answers.filter(a => a.answer === q.correct);
 
-  if (correct.length > 0) {
-    /* όλοι οι σωστοί +1 */
-    correct.forEach(a => {
-      players.get(a.ws).score += 1;
-    });
-
-    /* πιο γρήγορος +1 */
-    const fastest = correct.sort((a, b) => a.time - b.time)[0];
+  if (correct.length) {
+    correct.forEach(a => players.get(a.ws).score += 1);
+    const fastest = correct.sort((a,b)=>a.time-b.time)[0];
     players.get(fastest.ws).score += 1;
 
     broadcast({
@@ -154,15 +164,10 @@ function evaluateAnswers() {
     });
   }
 
-  broadcast({
-    type: "players",
-    players: [...players.values()]
-  });
-
+  broadcastPlayers();
   setTimeout(nextQuestion, 3000);
 }
 
-/* ===== START ===== */
-server.listen(PORT, () => {
-  console.log("✅ Server running on port", PORT);
-});
+server.listen(PORT, () =>
+  console.log("✅ Server running on port", PORT)
+);
