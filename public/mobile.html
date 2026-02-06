@@ -90,15 +90,17 @@ const ws = new WebSocket(
 let answered=false;
 
 function join(){
-  const name=nameInput.value.trim();
+  const name = document.getElementById("name").value.trim();
   if(!name) return alert("Βάλε όνομα");
-  ws.send(JSON.stringify({type:"join",name}));
+
+  ws.send(JSON.stringify({ type:"join", name }));
+
   joinScreen.classList.add("hidden");
   readyScreen.classList.remove("hidden");
 }
 
 function ready(){
-  ws.send(JSON.stringify({type:"ready"}));
+  ws.send(JSON.stringify({ type:"ready" }));
   readyScreen.classList.add("hidden");
   gameScreen.classList.remove("hidden");
   status.textContent="Περιμένουμε να ξεκινήσει το παιχνίδι…";
@@ -107,20 +109,20 @@ function ready(){
 function send(a){
   if(answered) return;
   answered=true;
-  ws.send(JSON.stringify({type:"answer",answer:a}));
+  ws.send(JSON.stringify({ type:"answer", answer:a }));
   status.textContent="Απάντηση στάλθηκε ✓";
 }
 
 ws.onmessage=e=>{
   const d=JSON.parse(e.data);
 
+  if(d.type==="countdown"){
+    status.textContent="Ξεκινά σε "+d.seconds;
+  }
+
   if(d.type==="question"){
     answered=false;
     status.textContent="ΑΠΑΝΤΗΣΕ ΤΩΡΑ!";
-  }
-
-  if(d.type==="countdown"){
-    status.textContent="Ξεκινά σε "+d.seconds;
   }
 };
 </script>
