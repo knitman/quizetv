@@ -31,9 +31,7 @@ let gameStarted = false;
 let answers = [];
 let startTime = 0;
 
-const players = new Map(); 
-// ws -> { name, score, ready }
-
+const players = new Map(); // ws -> { name, score, ready }
 let qrDataUrl = "";
 
 /* QR */
@@ -58,8 +56,8 @@ function broadcastPlayers() {
 }
 
 function allReady() {
-  return [...players.values()].length > 0 &&
-         [...players.values()].every(p => p.ready);
+  const list = [...players.values()];
+  return list.length > 0 && list.every(p => p.ready === true);
 }
 
 /* SOCKETS */
@@ -84,21 +82,29 @@ wss.on("connection", ws => {
     /* READY */
     if (data.type === "ready") {
       const p = players.get(ws);
-      if (p) p.ready = true;
-      broadcastPlayers();
+      if (p) {
+        p.ready = true;
+        broadcastPlayers();
+      }
     }
 
-    /* ADMIN START */
+    /* ADMIN START (ΑΠΟ TV) */
     if (data.type === "admin_start") {
-      if (!gameStarted && allReady()) {
-        gameStarted = true;
-        qIndex = 0;
-        startCountdown();
-      } else {
+
+      if (gameStarted) return;
+
+      if (!allReady()) {
         ws.send(JSON.stringify({
-          type: "not_ready"
+          type: "not_ready",
+          message: "Δεν είναι όλοι έτοιμοι"
         }));
+        return;
       }
+
+      // ✅ ΟΛΟΙ ΕΤΟΙΜΟΙ → ΞΕΚΙΝΑΜΕ
+      gameStarted = true;
+      qIndex = 0;
+      startCountdown();
     }
 
     /* ANSWER */
