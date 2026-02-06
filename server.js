@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 8080;
 
 /* STATIC */
 app.use(express.static(path.join(__dirname, "public")));
-app.get("/", (req, res) =>
+app.get("/", (_, res) =>
   res.sendFile(path.join(__dirname, "public", "intro.html"))
 );
 
@@ -69,17 +69,11 @@ wss.on("connection", ws => {
     let data;
     try { data = JSON.parse(raw); } catch { return; }
 
-    /* JOIN */
     if (data.type === "join") {
-      players.set(ws, {
-        name: data.name,
-        score: 0,
-        ready: false
-      });
+      players.set(ws, { name: data.name, score: 0, ready: false });
       broadcastPlayers();
     }
 
-    /* READY */
     if (data.type === "ready") {
       const p = players.get(ws);
       if (p) {
@@ -88,26 +82,19 @@ wss.on("connection", ws => {
       }
     }
 
-    /* ADMIN START (ΑΠΟ TV) */
     if (data.type === "admin_start") {
-
       if (gameStarted) return;
 
       if (!allReady()) {
-        ws.send(JSON.stringify({
-          type: "not_ready",
-          message: "Δεν είναι όλοι έτοιμοι"
-        }));
+        ws.send(JSON.stringify({ type: "not_ready" }));
         return;
       }
 
-      // ✅ ΟΛΟΙ ΕΤΟΙΜΟΙ → ΞΕΚΙΝΑΜΕ
       gameStarted = true;
       qIndex = 0;
       startCountdown();
     }
 
-    /* ANSWER */
     if (data.type === "answer" && gameStarted) {
       answers.push({
         ws,
@@ -131,13 +118,11 @@ wss.on("connection", ws => {
 /* COUNTDOWN */
 function startCountdown() {
   let seconds = 5;
-
   broadcast({ type: "countdown", seconds });
 
   const timer = setInterval(() => {
     seconds--;
     broadcast({ type: "countdown", seconds });
-
     if (seconds === 0) {
       clearInterval(timer);
       nextQuestion();
