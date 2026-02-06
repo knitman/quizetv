@@ -20,11 +20,12 @@ app.get("/", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "intro.html"))
 );
 
-/* DATA */
+/* QUESTIONS */
 const questions = JSON.parse(
   fs.readFileSync(path.join(__dirname, "questions.json"), "utf-8")
 );
 
+/* GAME STATE */
 let qIndex = 0;
 let gameStarted = false;
 let answers = [];
@@ -47,6 +48,18 @@ QRCode.toDataURL(`${BASE_URL}/mobile.html`).then(url => {
 function broadcast(data) {
   const msg = JSON.stringify(data);
   wss.clients.forEach(c => c.readyState === 1 && c.send(msg));
+}
+
+function broadcastPlayers() {
+  broadcast({
+    type: "players",
+    players: [...players.values()]
+  });
+}
+
+function allReady() {
+  return [...players.values()].length > 0 &&
+         [...players.values()].every(p => p.ready);
 }
 
 /* SOCKETS */
@@ -76,10 +89,16 @@ wss.on("connection", ws => {
     }
 
     /* ADMIN START */
-    if (data.type === "admin_start" && !gameStarted) {
-      gameStarted = true;
-      qIndex = 0;
-      startCountdown();
+    if (data.type === "admin_start") {
+      if (!gameStarted && allReady()) {
+        gameStarted = true;
+        qIndex = 0;
+        startCountdown();
+      } else {
+        ws.send(JSON.stringify({
+          type: "not_ready"
+        }));
+      }
     }
 
     /* ANSWER */
@@ -102,14 +121,6 @@ wss.on("connection", ws => {
     broadcastPlayers();
   });
 });
-
-/* PLAYERS UPDATE */
-function broadcastPlayers() {
-  broadcast({
-    type: "players",
-    players: [...players.values()]
-  });
-}
 
 /* COUNTDOWN */
 function startCountdown() {
