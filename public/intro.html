@@ -2,100 +2,127 @@
 <html lang="el">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ</title>
 
 <style>
 html, body {
-  width:100%;
-  height:100%;
-  margin:0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
   background: radial-gradient(circle at top, #0b2c5d, #020b1c);
-  color: gold;
+  color: white;
   font-family: Arial, sans-serif;
+}
+
+#container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   text-align: center;
 }
 
 #logo {
-  width: 320px;
-  margin-top: 30px;
-  animation: logoIn 1.2s cubic-bezier(.22,1.28,.36,1);
+  width: 260px;
+  margin-bottom: 30px;
 }
 
-@keyframes logoIn {
-  from { opacity:0; transform: translateY(40px) scale(0.85); }
-  to   { opacity:1; transform: translateY(0) scale(1); }
+#title {
+  font-size: 38px;
+  color: gold;
+  margin-bottom: 10px;
 }
 
-#qr-wrapper {
-  width:260px;
-  height:260px;
-  margin:40px auto 20px;
-  border-radius:50%;
-  background: rgba(255,215,0,0.08);
-  display:flex;
-  align-items:center;
-  justify-content:center;
+#subtitle {
+  font-size: 22px;
+  margin-bottom: 30px;
+}
+
+#qr-box {
+  background: white;
+  padding: 16px;
+  border-radius: 16px;
+  margin-bottom: 20px;
 }
 
 #qr {
-  width:200px;
-  height:200px;
-  background:#fff;
-  border-radius:20px;
+  width: 260px;
+  height: 260px;
 }
 
-#players {
-  margin-top:10px;
-  font-size:18px;
+#hint {
+  font-size: 20px;
+  color: gold;
+  margin-top: 10px;
 }
 
-#start {
-  margin-top:30px;
-  font-size:22px;
-  padding:16px 46px;
-  border:none;
-  border-radius:40px;
-  cursor:pointer;
-  background: linear-gradient(135deg, gold, #ffec8b);
-  color:#081c3a;
+#status {
+  margin-top: 30px;
+  font-size: 22px;
+  color: #ffec8b;
 }
 </style>
 </head>
 
 <body>
 
-<img id="logo" src="logo.png" alt="Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ">
+<div id="container">
 
-<div id="qr-wrapper">
-  <img id="qr" alt="QR Code">
+  <!-- LOGO -->
+  <img id="logo" src="logo.png" alt="Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ">
+
+  <!-- TITLES -->
+  <div id="title">Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ</div>
+  <div id="subtitle">Σκάναρε για να παίξεις</div>
+
+  <!-- QR -->
+  <div id="qr-box">
+    <img id="qr" src="" alt="QR Code">
+  </div>
+
+  <div id="hint">Άνοιξε την κάμερα στο κινητό σου</div>
+
+  <div id="status">Περιμένουμε παίκτες…</div>
+
 </div>
-
-<div id="players"></div>
-
-<button id="start">START GAME</button>
 
 <script>
 const ws = new WebSocket(
-  (location.protocol==="https:"?"wss://":"ws://")+location.host
+  (location.protocol === "https:" ? "wss://" : "ws://") + location.host
 );
+
+const qrImg = document.getElementById("qr");
+const status = document.getElementById("status");
 
 ws.onmessage = e => {
   const d = JSON.parse(e.data);
 
+  /* QR CODE */
   if (d.type === "qr") {
-    document.getElementById("qr").src = d.qr;
+    qrImg.src = d.qr;
   }
 
+  /* PLAYERS STATUS */
   if (d.type === "players") {
-    document.getElementById("players").textContent =
-      "Παίκτες: " + d.players.map(p => p.name).join(" • ");
-  }
-};
+    const total = d.players.length;
+    const ready = d.players.filter(p => p.ready).length;
 
-document.getElementById("start").onclick = () => {
-  ws.send(JSON.stringify({ type:"admin_start" }));
-  setTimeout(()=>location.href="/tv.html",300);
+    if (total === 0) {
+      status.textContent = "Περιμένουμε παίκτες…";
+    } else if (ready < total) {
+      status.textContent =
+        `Έτοιμοι ${ready} / ${total} – περιμένουμε…`;
+    } else {
+      status.textContent =
+        "Όλοι έτοιμοι! Ξεκινάμε…";
+    }
+  }
+
+  /* COUNTDOWN */
+  if (d.type === "countdown") {
+    status.textContent = "Ξεκινά σε " + d.seconds;
+  }
 };
 </script>
 
