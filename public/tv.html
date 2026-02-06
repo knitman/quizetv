@@ -6,130 +6,145 @@
 
 <style>
 body {
-  margin: 0;
+  margin:0;
   background: radial-gradient(circle at top, #0b2c5d, #020b1c);
-  color: white;
-  font-family: Arial, sans-serif;
-  text-align: center;
+  color:white;
+  font-family:Arial, sans-serif;
+  text-align:center;
 }
 
-/* ===== LOGO TOP ===== */
 #tv-logo {
-  width: 200px;
-  margin: 20px auto 10px;
+  width:200px;
+  margin:20px auto;
 }
 
-/* ===== QUESTION ===== */
 #question-box {
-  width: 80%;
-  margin: 0 auto 30px;
-  padding: 20px;
-  border: 3px solid gold;
-  border-radius: 16px;
-  font-size: 34px;
-  background: rgba(0,0,0,0.45);
+  width:80%;
+  margin:20px auto;
+  padding:20px;
+  border:3px solid gold;
+  border-radius:16px;
+  font-size:34px;
+  background:rgba(0,0,0,0.45);
 }
 
-/* ===== ANSWERS ===== */
 #answers {
-  width: 85%;
-  margin: auto;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  width:85%;
+  margin:auto;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
 }
 
 .answer {
-  display: flex;
-  align-items: center;
-  border: 3px solid gold;
-  border-radius: 14px;
-  padding: 16px 20px;
-  font-size: 26px;
-  background: rgba(0,0,0,0.5);
-  transition: all 0.2s ease;
-}
-
-.answer span {
-  font-weight: bold;
-  color: gold;
-  margin-right: 14px;
+  border:3px solid gold;
+  border-radius:14px;
+  padding:16px;
+  font-size:26px;
+  background:rgba(0,0,0,0.5);
 }
 
 .answer.live {
   background: linear-gradient(135deg, #d4af37, #ffec8b);
-  color: #081c3a;
-  transform: scale(1.03);
+  color:#081c3a;
 }
 
-/* ===== STATUS ===== */
 #status {
-  margin-top: 25px;
-  font-size: 24px;
-  color: gold;
+  margin-top:20px;
+  font-size:24px;
+  color:gold;
 }
 
-/* ===== SCORES ===== */
 #scores {
-  margin-top: 20px;
-  list-style: none;
-  padding: 0;
-  font-size: 18px;
+  list-style:none;
+  padding:0;
+  font-size:18px;
+}
+
+#start {
+  margin-top:20px;
+  font-size:22px;
+  padding:14px 40px;
+  border:none;
+  border-radius:30px;
+  cursor:pointer;
+  background:#666;
+  color:#222;
+}
+
+#start.enabled {
+  background: gold;
+  color:#081c3a;
 }
 </style>
 </head>
 
 <body>
 
-<img id="tv-logo" src="logo.png" alt="Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ">
+<img id="tv-logo" src="logo.png">
 
-<div id="question-box">Περιμένουμε την ερώτηση…</div>
+<div id="question-box">Περιμένουμε παίκτες…</div>
 
 <div id="answers">
-  <div class="answer" id="a0"><span>Α.</span><div></div></div>
-  <div class="answer" id="a1"><span>Β.</span><div></div></div>
-  <div class="answer" id="a2"><span>Γ.</span><div></div></div>
-  <div class="answer" id="a3"><span>Δ.</span><div></div></div>
+  <div class="answer" id="a0">Α.</div>
+  <div class="answer" id="a1">Β.</div>
+  <div class="answer" id="a2">Γ.</div>
+  <div class="answer" id="a3">Δ.</div>
 </div>
 
 <div id="status"></div>
+
 <ul id="scores"></ul>
+
+<button id="start">START</button>
 
 <script>
 const ws = new WebSocket(
-  (location.protocol === "https:" ? "wss://" : "ws://") + location.host
+  (location.protocol==="https:"?"wss://":"ws://")+location.host
 );
 
-ws.onmessage = e => {
-  const d = JSON.parse(e.data);
+let canStart=false;
 
-  if (d.type === "question") {
-    questionBox.textContent = d.question.text;
-    status.textContent = "Απαντούν οι παίκτες…";
+ws.onmessage=e=>{
+  const d=JSON.parse(e.data);
 
-    d.question.answers.forEach((ans, i) => {
-      const el = document.getElementById("a" + i);
-      el.classList.remove("live");
-      el.querySelector("div").textContent = ans;
-    });
-  }
+  if(d.type==="players"){
+    scores.innerHTML="";
+    canStart = d.players.length>0 && d.players.every(p=>p.ready);
 
-  /* LIVE ANSWER FEEDBACK */
-  if (d.type === "answer_live") {
-    document.getElementById("a" + d.answer).classList.add("live");
-  }
-
-  if (d.type === "winner") {
-    status.textContent = "Πιο γρήγορος: " + d.name;
-  }
-
-  if (d.type === "players") {
-    scores.innerHTML = "";
-    d.players.forEach(p => {
-      const li = document.createElement("li");
-      li.textContent = `${p.name}: ${p.score}`;
+    d.players.forEach(p=>{
+      const li=document.createElement("li");
+      li.textContent=`${p.ready?"✔":"…"} ${p.name}`;
       scores.appendChild(li);
     });
+
+    start.className = canStart ? "enabled" : "";
+    status.textContent = canStart
+      ? "Όλοι έτοιμοι!"
+      : "Περιμένουμε να είναι όλοι έτοιμοι…";
+  }
+
+  if(d.type==="countdown"){
+    status.textContent="Ξεκινά σε "+d.seconds;
+  }
+
+  if(d.type==="question"){
+    questionBox.textContent=d.question.text;
+    d.question.answers.forEach((a,i)=>{
+      const el=document.getElementById("a"+i);
+      el.textContent=["Α.","Β.","Γ.","Δ."][i]+" "+a;
+      el.classList.remove("live");
+    });
+  }
+
+  if(d.type==="answer_live"){
+    document.getElementById("a"+d.answer).classList.add("live");
+  }
+};
+
+start.onclick=()=>{
+  if(canStart){
+    ws.send(JSON.stringify({type:"admin_start"}));
   }
 };
 </script>
