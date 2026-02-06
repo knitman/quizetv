@@ -3,46 +3,172 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Controller</title>
+<title>Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ</title>
+
 <style>
-body{background:#081c3a;color:gold;text-align:center;font-family:Arial}
-button{width:80%;padding:18px;font-size:24px;margin:10px}
+/* ===== BASE ===== */
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #0b2c5d, #020b1c);
+  color: gold;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  overflow: hidden;
+}
+
+/* ===== CONTAINERS ===== */
+.screen {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0; left: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.8s cubic-bezier(.22,1.2,.36,1), opacity 0.6s ease;
+}
+
+.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(80px) scale(0.8);
+}
+
+/* ===== TITLE ===== */
+h1 {
+  font-size: 32px;
+  margin-bottom: 20px;
+  text-shadow: 0 0 20px gold;
+}
+
+/* ===== INPUT ===== */
+input {
+  width: 80%;
+  padding: 14px;
+  font-size: 18px;
+  border-radius: 30px;
+  border: none;
+  outline: none;
+  text-align: center;
+}
+
+/* ===== BUTTONS ===== */
+button {
+  margin-top: 20px;
+  padding: 16px 40px;
+  font-size: 20px;
+  border: none;
+  border-radius: 40px;
+  cursor: pointer;
+  background: linear-gradient(135deg, gold, #ffec8b);
+  color: #081c3a;
+  box-shadow: 0 10px 30px rgba(255,215,0,0.4);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+button:active {
+  transform: scale(0.96);
+  box-shadow: 0 6px 20px rgba(255,215,0,0.3);
+}
+
+/* ===== ANSWERS ===== */
+.answers {
+  width: 90%;
+}
+
+.answers button {
+  width: 100%;
+  margin: 10px 0;
+  font-size: 24px;
+}
+
+/* ===== STATUS ===== */
+#status {
+  margin-top: 20px;
+  font-size: 18px;
+  opacity: 0.8;
+}
 </style>
 </head>
+
 <body>
 
-<h1>Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ</h1>
+<!-- JOIN SCREEN -->
+<div id="joinScreen" class="screen">
+  <h1>Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ</h1>
+  <p>Γράψε το όνομά σου</p>
+  <input id="name" placeholder="Όνομα παίκτη">
+  <button onclick="join()">ΜΠΕΣ ΣΤΟ ΠΑΙΧΝΙΔΙ</button>
+</div>
 
-<input id="name" placeholder="Όνομα">
-<button onclick="join()">ΜΠΕΣ</button>
+<!-- GAME SCREEN -->
+<div id="gameScreen" class="screen hidden">
+  <h1>ΔΙΑΛΕΞΕ ΑΠΑΝΤΗΣΗ</h1>
 
-<div id="game" style="display:none">
-<button onclick="send(0)">Α</button>
-<button onclick="send(1)">Β</button>
-<button onclick="send(2)">Γ</button>
-<button onclick="send(3)">Δ</button>
+  <div class="answers">
+    <button onclick="send(0)">🅰 Α</button>
+    <button onclick="send(1)">🅱 Β</button>
+    <button onclick="send(2)">🅲 Γ</button>
+    <button onclick="send(3)">🅳 Δ</button>
+  </div>
+
+  <div id="status">Περίμενε την ερώτηση…</div>
 </div>
 
 <script>
 const ws = new WebSocket(
-  (location.protocol==="https:"?"wss://":"ws://")+location.host
+  (location.protocol === "https:" ? "wss://" : "ws://") + location.host
 );
-let answered=false;
 
-function join(){
-  ws.send(JSON.stringify({type:"join",name:name.value}));
-  game.style.display="block";
+let answered = false;
+
+/* UI helpers */
+function showGame() {
+  document.getElementById("joinScreen").classList.add("hidden");
+  document.getElementById("gameScreen").classList.remove("hidden");
 }
 
-function send(a){
-  if(answered) return;
-  answered=true;
-  ws.send(JSON.stringify({type:"answer",answer:a}));
+/* JOIN */
+function join() {
+  const name = document.getElementById("name").value.trim();
+  if (!name) {
+    alert("Βάλε όνομα");
+    return;
+  }
+
+  ws.send(JSON.stringify({ type: "join", name }));
+  showGame();
 }
 
-ws.onmessage=e=>{
-  const d=JSON.parse(e.data);
-  if(d.type==="question") answered=false;
+/* SEND ANSWER */
+function send(a) {
+  if (answered) return;
+  answered = true;
+
+  ws.send(JSON.stringify({ type: "answer", answer: a }));
+  document.getElementById("status").textContent = "Απάντηση στάλθηκε ✓";
+}
+
+/* SOCKET EVENTS */
+ws.onmessage = e => {
+  const data = JSON.parse(e.data);
+
+  if (data.type === "question") {
+    answered = false;
+    document.getElementById("status").textContent =
+      "ΑΠΑΝΤΗΣΕ ΤΩΡΑ!";
+  }
+
+  if (data.type === "winner") {
+    document.getElementById("status").textContent =
+      data.name ? "Κέρδισε ο πιο γρήγορος!" : "";
+  }
+
+  if (data.type === "end") {
+    document.getElementById("status").textContent =
+      "ΤΕΛΟΣ ΠΑΙΧΝΙΔΙΟΥ";
+  }
 };
 </script>
 
