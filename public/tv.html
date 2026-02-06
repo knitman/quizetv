@@ -5,36 +5,32 @@
 <title>Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ</title>
 
 <style>
-/* ===== BASE ===== */
 body {
   margin: 0;
   background: radial-gradient(circle at top, #0b2c5d, #020b1c);
   color: white;
   font-family: Arial, sans-serif;
+  text-align: center;
 }
 
-/* ===== LOGO ===== */
+/* ===== LOGO TOP ===== */
 #tv-logo {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  width: 160px;
-  opacity: 0.95;
+  width: 200px;
+  margin: 20px auto 10px;
 }
 
 /* ===== QUESTION ===== */
 #question-box {
-  margin: 120px auto 40px;
   width: 80%;
+  margin: 0 auto 30px;
   padding: 20px;
   border: 3px solid gold;
   border-radius: 16px;
-  text-align: center;
   font-size: 34px;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0,0,0,0.45);
 }
 
-/* ===== ANSWERS GRID ===== */
+/* ===== ANSWERS ===== */
 #answers {
   width: 85%;
   margin: auto;
@@ -43,7 +39,6 @@ body {
   gap: 20px;
 }
 
-/* ===== ANSWER ===== */
 .answer {
   display: flex;
   align-items: center;
@@ -51,8 +46,8 @@ body {
   border-radius: 14px;
   padding: 16px 20px;
   font-size: 26px;
-  background: rgba(0,0,0,0.45);
-  transition: transform 0.2s ease, background 0.2s ease;
+  background: rgba(0,0,0,0.5);
+  transition: all 0.2s ease;
 }
 
 .answer span {
@@ -61,32 +56,25 @@ body {
   margin-right: 14px;
 }
 
-.answer.active {
+.answer.live {
   background: linear-gradient(135deg, #d4af37, #ffec8b);
   color: #081c3a;
-  transform: scale(1.02);
+  transform: scale(1.03);
 }
 
 /* ===== STATUS ===== */
 #status {
-  margin-top: 30px;
-  text-align: center;
+  margin-top: 25px;
   font-size: 24px;
   color: gold;
 }
 
 /* ===== SCORES ===== */
 #scores {
-  position: fixed;
-  bottom: 20px;
-  right: 30px;
+  margin-top: 20px;
   list-style: none;
   padding: 0;
   font-size: 18px;
-}
-
-#scores li {
-  margin-bottom: 6px;
 }
 </style>
 </head>
@@ -115,39 +103,33 @@ const ws = new WebSocket(
 ws.onmessage = e => {
   const d = JSON.parse(e.data);
 
-  /* ΝΕΑ ΕΡΩΤΗΣΗ */
   if (d.type === "question") {
-    document.getElementById("question-box").textContent = d.question.text;
-    document.getElementById("status").textContent = "Απαντούν οι παίκτες…";
+    questionBox.textContent = d.question.text;
+    status.textContent = "Απαντούν οι παίκτες…";
 
     d.question.answers.forEach((ans, i) => {
       const el = document.getElementById("a" + i);
-      el.classList.remove("active");
+      el.classList.remove("live");
       el.querySelector("div").textContent = ans;
     });
   }
 
-  /* ΠΙΟ ΓΡΗΓΟΡΟΣ */
-  if (d.type === "winner") {
-    document.getElementById("status").textContent =
-      "Πιο γρήγορος: " + d.name;
+  /* LIVE ANSWER FEEDBACK */
+  if (d.type === "answer_live") {
+    document.getElementById("a" + d.answer).classList.add("live");
   }
 
-  /* SCOREBOARD */
+  if (d.type === "winner") {
+    status.textContent = "Πιο γρήγορος: " + d.name;
+  }
+
   if (d.type === "players") {
-    const ul = document.getElementById("scores");
-    ul.innerHTML = "";
+    scores.innerHTML = "";
     d.players.forEach(p => {
       const li = document.createElement("li");
       li.textContent = `${p.name}: ${p.score}`;
-      ul.appendChild(li);
+      scores.appendChild(li);
     });
-  }
-
-  /* ΤΕΛΟΣ */
-  if (d.type === "end") {
-    document.getElementById("status").textContent =
-      "ΤΕΛΟΣ ΠΑΙΧΝΙΔΙΟΥ";
   }
 };
 </script>
