@@ -30,17 +30,9 @@ let qIndex = 0;
 let gameStarted = false;
 let answers = [];
 let startTime = 0;
+let countdownRunning = false;
 
 const players = new Map(); // ws -> { name, score, ready }
-let qrDataUrl = "";
-
-/* QR */
-const BASE_URL =
-  process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
-
-QRCode.toDataURL(`${BASE_URL}/mobile.html`).then(url => {
-  qrDataUrl = url;
-});
 
 /* HELPERS */
 function broadcast(data) {
@@ -57,13 +49,20 @@ function broadcastPlayers() {
 
 function allReady() {
   const list = [...players.values()];
-  return list.length > 0 && list.every(p => p.ready === true);
+  return list.length > 0 && list.every(p => p.ready);
+}
+
+/* AUTO START CHECK */
+function tryAutoStart() {
+  if (gameStarted || countdownRunning) return;
+  if (!allReady()) return;
+
+  countdownRunning = true;
+  startCountdown();
 }
 
 /* SOCKETS */
 wss.on("connection", ws => {
-
-  ws.send(JSON.stringify({ type: "qr", qr: qrDataUrl }));
 
   ws.on("message", raw => {
     let data;
@@ -79,20 +78,8 @@ wss.on("connection", ws => {
       if (p) {
         p.ready = true;
         broadcastPlayers();
+        tryAutoStart(); // 🔥 ΕΔΩ ΓΙΝΕΤΑΙ ΤΟ AUTO START
       }
-    }
-
-    if (data.type === "admin_start") {
-      if (gameStarted) return;
-
-      if (!allReady()) {
-        ws.send(JSON.stringify({ type: "not_ready" }));
-        return;
-      }
-
-      gameStarted = true;
-      qIndex = 0;
-      startCountdown();
     }
 
     if (data.type === "answer" && gameStarted) {
@@ -123,8 +110,12 @@ function startCountdown() {
   const timer = setInterval(() => {
     seconds--;
     broadcast({ type: "countdown", seconds });
+
     if (seconds === 0) {
       clearInterval(timer);
+      gameStarted = true;
+      countdownRunning = false;
+      qIndex = 0;
       nextQuestion();
     }
   }, 1000);
