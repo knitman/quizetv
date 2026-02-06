@@ -23,7 +23,7 @@ input {
   border-radius:30px; border:none; text-align:center;
 }
 button {
-  margin-top:20px; padding:16px 44px;
+  margin-top:16px; padding:16px 44px;
   font-size:20px; border:none; border-radius:40px;
   background:linear-gradient(135deg,gold,#ffec8b);
 }
@@ -55,7 +55,8 @@ button {
 const ws = new WebSocket(
   (location.protocol==="https:"?"wss://":"ws://")+location.host
 );
-let answered=false;
+
+let answered = false;
 
 function join(){
   const name=document.getElementById("name").value.trim();
@@ -74,15 +75,22 @@ function ready(){
 
 function send(a){
   if(answered) return;
-  answered=true;
+  answered = true;
   ws.send(JSON.stringify({type:"answer",answer:a}));
-  status.textContent="Στάλθηκε ✓";
+  status.textContent="Απάντηση στάλθηκε ✓";
 }
 
 ws.onmessage=e=>{
   const d=JSON.parse(e.data);
-  if(d.type==="countdown") status.textContent="Ξεκινά σε "+d.seconds;
-  if(d.type==="question"){ answered=false; status.textContent="ΑΠΑΝΤΑ!"; }
+
+  if(d.type==="countdown"){
+    status.textContent="Ξεκινά σε "+d.seconds;
+  }
+
+  if(d.type==="question"){
+    answered = false;               // 🔥 reset για ΝΕΑ ερώτηση
+    status.textContent="ΑΠΑΝΤΗΣΕ ΤΩΡΑ!";
+  }
 };
 </script>
 
