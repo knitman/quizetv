@@ -6,16 +6,13 @@
 <title>Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ</title>
 
 <style>
-/* ===== RESET & FULL HEIGHT ===== */
 html, body {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
+  width:100%;
+  height:100%;
+  margin:0;
   background: radial-gradient(circle at top, #0b2c5d, #020b1c);
 }
 
-/* ===== BASE ===== */
 body {
   color: gold;
   font-family: Arial, sans-serif;
@@ -23,158 +20,114 @@ body {
   overflow: hidden;
 }
 
-/* ===== SCREENS ===== */
 .screen {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  background: transparent;
-  transition:
-    transform 0.8s cubic-bezier(.22,1.2,.36,1),
-    opacity 0.6s ease;
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  transition: transform 0.8s cubic-bezier(.22,1.2,.36,1), opacity 0.6s ease;
 }
 
 .hidden {
-  opacity: 0;
-  pointer-events: none;
+  opacity:0;
+  pointer-events:none;
   transform: translateY(80px) scale(0.85);
 }
 
-/* ===== TITLE ===== */
-h1 {
-  font-size: 32px;
-  margin-bottom: 20px;
-  letter-spacing: 1px;
-  text-shadow: 0 0 25px gold;
+#logo {
+  width:220px;
+  margin-bottom:20px;
 }
 
-/* ===== INPUT ===== */
 input {
-  width: 80%;
-  padding: 14px;
-  font-size: 18px;
-  border-radius: 30px;
-  border: none;
-  outline: none;
-  text-align: center;
-  background: #ffffff;
+  width:80%;
+  padding:14px;
+  font-size:18px;
+  border-radius:30px;
+  border:none;
+  text-align:center;
 }
 
-/* ===== BUTTONS ===== */
 button {
-  margin-top: 20px;
-  padding: 16px 44px;
-  font-size: 20px;
-  border: none;
-  border-radius: 40px;
-  cursor: pointer;
+  margin-top:20px;
+  padding:16px 44px;
+  font-size:20px;
+  border:none;
+  border-radius:40px;
+  cursor:pointer;
   background: linear-gradient(135deg, gold, #ffec8b);
-  color: #081c3a;
-  box-shadow: 0 10px 30px rgba(255,215,0,0.45);
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease;
+  color:#081c3a;
+  box-shadow:0 10px 30px rgba(255,215,0,0.45);
 }
 
-button:active {
-  transform: scale(0.95);
-  box-shadow: 0 6px 20px rgba(255,215,0,0.35);
-}
-
-/* ===== ANSWERS ===== */
 .answers {
-  width: 90%;
+  width:90%;
 }
 
 .answers button {
-  width: 100%;
-  margin: 10px 0;
-  font-size: 24px;
+  width:100%;
+  margin:10px 0;
+  font-size:24px;
 }
 
-/* ===== STATUS ===== */
 #status {
-  margin-top: 22px;
-  font-size: 18px;
-  opacity: 0.85;
+  margin-top:20px;
+  font-size:18px;
 }
 </style>
 </head>
 
 <body>
 
-<!-- JOIN SCREEN -->
+<!-- JOIN -->
 <div id="joinScreen" class="screen">
-  <h1>Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ</h1>
+  <img id="logo" src="logo.png" alt="Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ">
   <p>Γράψε το όνομά σου</p>
   <input id="name" placeholder="Όνομα παίκτη">
-  <button onclick="join()">ΜΠΕΣ ΣΤΟ ΠΑΙΧΝΙΔΙ</button>
+  <button onclick="join()">ΜΠΕΣ</button>
 </div>
 
-<!-- GAME SCREEN -->
+<!-- GAME -->
 <div id="gameScreen" class="screen hidden">
-  <h1>ΔΙΑΛΕΞΕ ΑΠΑΝΤΗΣΗ</h1>
-
+  <img id="logo" src="logo.png" alt="Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ">
   <div class="answers">
     <button onclick="send(0)">🅰 Α</button>
     <button onclick="send(1)">🅱 Β</button>
     <button onclick="send(2)">🅲 Γ</button>
     <button onclick="send(3)">🅳 Δ</button>
   </div>
-
   <div id="status">Περίμενε την ερώτηση…</div>
 </div>
 
 <script>
 const ws = new WebSocket(
-  (location.protocol === "https:" ? "wss://" : "ws://") + location.host
+  (location.protocol==="https:"?"wss://":"ws://")+location.host
 );
 
-let answered = false;
+let answered=false;
 
-function showGame() {
-  document.getElementById("joinScreen").classList.add("hidden");
-  document.getElementById("gameScreen").classList.remove("hidden");
+function join(){
+  const name=document.getElementById("name").value.trim();
+  if(!name) return alert("Βάλε όνομα");
+  ws.send(JSON.stringify({type:"join",name}));
+  joinScreen.classList.add("hidden");
+  gameScreen.classList.remove("hidden");
 }
 
-function join() {
-  const name = document.getElementById("name").value.trim();
-  if (!name) {
-    alert("Βάλε όνομα");
-    return;
-  }
-  ws.send(JSON.stringify({ type: "join", name }));
-  showGame();
+function send(a){
+  if(answered) return;
+  answered=true;
+  ws.send(JSON.stringify({type:"answer",answer:a}));
+  status.textContent="Απάντηση στάλθηκε ✓";
 }
 
-function send(a) {
-  if (answered) return;
-  answered = true;
-  ws.send(JSON.stringify({ type: "answer", answer: a }));
-  document.getElementById("status").textContent =
-    "Απάντηση στάλθηκε ✓";
-}
-
-ws.onmessage = e => {
-  const data = JSON.parse(e.data);
-
-  if (data.type === "question") {
-    answered = false;
-    document.getElementById("status").textContent =
-      "ΑΠΑΝΤΗΣΕ ΤΩΡΑ!";
-  }
-
-  if (data.type === "winner") {
-    document.getElementById("status").textContent =
-      "Ο πιο γρήγορος κερδίζει!";
-  }
-
-  if (data.type === "end") {
-    document.getElementById("status").textContent =
-      "ΤΕΛΟΣ ΠΑΙΧΝΙΔΙΟΥ";
+ws.onmessage=e=>{
+  const d=JSON.parse(e.data);
+  if(d.type==="question"){
+    answered=false;
+    status.textContent="ΑΠΑΝΤΗΣΕ ΤΩΡΑ!";
   }
 };
 </script>
