@@ -28,11 +28,21 @@ const questions = JSON.parse(
 /* GAME STATE */
 let qIndex = 0;
 let gameStarted = false;
+let countdownRunning = false;
 let answers = [];
 let startTime = 0;
-let countdownRunning = false;
 
 const players = new Map(); // ws -> { name, score, ready }
+let qrDataUrl = "";
+
+/* BASE URL (RENDER / LOCAL) */
+const BASE_URL =
+  process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+
+/* GENERATE QR */
+QRCode.toDataURL(`${BASE_URL}/mobile.html`).then(url => {
+  qrDataUrl = url;
+});
 
 /* HELPERS */
 function broadcast(data) {
@@ -52,7 +62,6 @@ function allReady() {
   return list.length > 0 && list.every(p => p.ready);
 }
 
-/* AUTO START CHECK */
 function tryAutoStart() {
   if (gameStarted || countdownRunning) return;
   if (!allReady()) return;
@@ -63,6 +72,14 @@ function tryAutoStart() {
 
 /* SOCKETS */
 wss.on("connection", ws => {
+
+  // 🔥 ΣΤΕΛΝΟΥΜΕ QR ΣΕ ΚΑΘΕ CLIENT
+  if (qrDataUrl) {
+    ws.send(JSON.stringify({
+      type: "qr",
+      qr: qrDataUrl
+    }));
+  }
 
   ws.on("message", raw => {
     let data;
@@ -78,7 +95,7 @@ wss.on("connection", ws => {
       if (p) {
         p.ready = true;
         broadcastPlayers();
-        tryAutoStart(); // 🔥 ΕΔΩ ΓΙΝΕΤΑΙ ΤΟ AUTO START
+        tryAutoStart(); // AUTO START
       }
     }
 
@@ -113,8 +130,8 @@ function startCountdown() {
 
     if (seconds === 0) {
       clearInterval(timer);
-      gameStarted = true;
       countdownRunning = false;
+      gameStarted = true;
       qIndex = 0;
       nextQuestion();
     }
