@@ -7,74 +7,43 @@
 
 <style>
 html, body {
-  width:100%;
-  height:100%;
-  margin:0;
+  width:100%; height:100%; margin:0;
   background: radial-gradient(circle at top, #0b2c5d, #020b1c);
-  color: gold;
-  font-family: Arial, sans-serif;
-  text-align: center;
+  color: gold; font-family: Arial; text-align:center;
 }
-
 .screen {
-  position:absolute;
-  inset:0;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  justify-content:center; align-items:center;
 }
-
 .hidden { display:none; }
-
-#icon {
-  width:140px;
-  margin-bottom:24px;
-  filter: drop-shadow(0 0 20px rgba(255,215,0,0.35));
-}
-
+#icon { width:140px; margin-bottom:20px; }
 input {
-  width:80%;
-  padding:14px;
-  font-size:18px;
-  border-radius:30px;
-  border:none;
-  text-align:center;
+  width:80%; padding:14px; font-size:18px;
+  border-radius:30px; border:none; text-align:center;
 }
-
 button {
-  margin-top:20px;
-  padding:16px 44px;
-  font-size:20px;
-  border:none;
-  border-radius:40px;
-  cursor:pointer;
-  background: linear-gradient(135deg, gold, #ffec8b);
-  color:#081c3a;
+  margin-top:20px; padding:16px 44px;
+  font-size:20px; border:none; border-radius:40px;
+  background:linear-gradient(135deg,gold,#ffec8b);
 }
 </style>
 </head>
 
 <body>
 
-<!-- JOIN -->
 <div id="joinScreen" class="screen">
   <img id="icon" src="icon.png">
-  <p>Γράψε το όνομά σου</p>
-  <input id="name" placeholder="Όνομα παίκτη">
+  <input id="name" placeholder="Όνομα">
   <button onclick="join()">ΜΠΕΣ</button>
 </div>
 
-<!-- READY -->
 <div id="readyScreen" class="screen hidden">
   <img id="icon" src="icon.png">
-  <p>Πάτα όταν είσαι έτοιμος</p>
   <button onclick="ready()">ΕΤΟΙΜΟΣ</button>
 </div>
 
-<!-- GAME -->
 <div id="gameScreen" class="screen hidden">
-  <img id="icon" src="icon.png">
   <button onclick="send(0)">🅰 Α</button>
   <button onclick="send(1)">🅱 Β</button>
   <button onclick="send(2)">🅲 Γ</button>
@@ -86,44 +55,34 @@ button {
 const ws = new WebSocket(
   (location.protocol==="https:"?"wss://":"ws://")+location.host
 );
-
 let answered=false;
 
 function join(){
-  const name = document.getElementById("name").value.trim();
+  const name=document.getElementById("name").value.trim();
   if(!name) return alert("Βάλε όνομα");
-
-  ws.send(JSON.stringify({ type:"join", name }));
-
+  ws.send(JSON.stringify({type:"join",name}));
   joinScreen.classList.add("hidden");
   readyScreen.classList.remove("hidden");
 }
 
 function ready(){
-  ws.send(JSON.stringify({ type:"ready" }));
+  ws.send(JSON.stringify({type:"ready"}));
   readyScreen.classList.add("hidden");
   gameScreen.classList.remove("hidden");
-  status.textContent="Περιμένουμε να ξεκινήσει το παιχνίδι…";
+  status.textContent="Περιμένουμε...";
 }
 
 function send(a){
   if(answered) return;
   answered=true;
-  ws.send(JSON.stringify({ type:"answer", answer:a }));
-  status.textContent="Απάντηση στάλθηκε ✓";
+  ws.send(JSON.stringify({type:"answer",answer:a}));
+  status.textContent="Στάλθηκε ✓";
 }
 
 ws.onmessage=e=>{
   const d=JSON.parse(e.data);
-
-  if(d.type==="countdown"){
-    status.textContent="Ξεκινά σε "+d.seconds;
-  }
-
-  if(d.type==="question"){
-    answered=false;
-    status.textContent="ΑΠΑΝΤΗΣΕ ΤΩΡΑ!";
-  }
+  if(d.type==="countdown") status.textContent="Ξεκινά σε "+d.seconds;
+  if(d.type==="question"){ answered=false; status.textContent="ΑΠΑΝΤΑ!"; }
 };
 </script>
 
