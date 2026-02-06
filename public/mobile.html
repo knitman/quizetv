@@ -11,9 +11,6 @@ html, body {
   height:100%;
   margin:0;
   background: radial-gradient(circle at top, #0b2c5d, #020b1c);
-}
-
-body {
   color: gold;
   font-family: Arial, sans-serif;
   text-align: center;
@@ -28,9 +25,7 @@ body {
   align-items:center;
 }
 
-.hidden {
-  display:none;
-}
+.hidden { display:none; }
 
 #icon {
   width:140px;
@@ -57,42 +52,34 @@ button {
   background: linear-gradient(135deg, gold, #ffec8b);
   color:#081c3a;
 }
-
-.answers {
-  width:90%;
-}
-
-.answers button {
-  width:100%;
-  margin:10px 0;
-  font-size:24px;
-}
-
-#status {
-  margin-top:20px;
-  font-size:18px;
-}
 </style>
 </head>
 
 <body>
 
+<!-- JOIN -->
 <div id="joinScreen" class="screen">
-  <img id="icon" src="icon.png" alt="Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ">
+  <img id="icon" src="icon.png">
   <p>Γράψε το όνομά σου</p>
   <input id="name" placeholder="Όνομα παίκτη">
   <button onclick="join()">ΜΠΕΣ</button>
 </div>
 
+<!-- READY -->
+<div id="readyScreen" class="screen hidden">
+  <img id="icon" src="icon.png">
+  <p>Πάτα όταν είσαι έτοιμος</p>
+  <button onclick="ready()">ΕΤΟΙΜΟΣ</button>
+</div>
+
+<!-- GAME -->
 <div id="gameScreen" class="screen hidden">
-  <img id="icon" src="icon.png" alt="Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ">
-  <div class="answers">
-    <button onclick="send(0)">🅰 Α</button>
-    <button onclick="send(1)">🅱 Β</button>
-    <button onclick="send(2)">🅲 Γ</button>
-    <button onclick="send(3)">🅳 Δ</button>
-  </div>
-  <div id="status">Περίμενε την ερώτηση…</div>
+  <img id="icon" src="icon.png">
+  <button onclick="send(0)">🅰 Α</button>
+  <button onclick="send(1)">🅱 Β</button>
+  <button onclick="send(2)">🅲 Γ</button>
+  <button onclick="send(3)">🅳 Δ</button>
+  <div id="status"></div>
 </div>
 
 <script>
@@ -103,11 +90,18 @@ const ws = new WebSocket(
 let answered=false;
 
 function join(){
-  const name=document.getElementById("name").value.trim();
+  const name=nameInput.value.trim();
   if(!name) return alert("Βάλε όνομα");
   ws.send(JSON.stringify({type:"join",name}));
   joinScreen.classList.add("hidden");
+  readyScreen.classList.remove("hidden");
+}
+
+function ready(){
+  ws.send(JSON.stringify({type:"ready"}));
+  readyScreen.classList.add("hidden");
   gameScreen.classList.remove("hidden");
+  status.textContent="Περιμένουμε να ξεκινήσει το παιχνίδι…";
 }
 
 function send(a){
@@ -119,9 +113,14 @@ function send(a){
 
 ws.onmessage=e=>{
   const d=JSON.parse(e.data);
+
   if(d.type==="question"){
     answered=false;
     status.textContent="ΑΠΑΝΤΗΣΕ ΤΩΡΑ!";
+  }
+
+  if(d.type==="countdown"){
+    status.textContent="Ξεκινά σε "+d.seconds;
   }
 };
 </script>
