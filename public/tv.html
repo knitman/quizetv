@@ -5,44 +5,88 @@
 <title>Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ</title>
 
 <style>
+/* ===== BASE ===== */
 body {
-  margin:0;
+  margin: 0;
   background: radial-gradient(circle at top, #0b2c5d, #020b1c);
-  color: gold;
+  color: white;
   font-family: Arial, sans-serif;
-  text-align: center;
 }
 
+/* ===== LOGO ===== */
 #tv-logo {
   position: fixed;
   top: 20px;
   left: 20px;
-  width: 180px;
+  width: 160px;
   opacity: 0.95;
 }
 
-#question {
-  margin-top: 140px;
-  font-size: 36px;
+/* ===== QUESTION ===== */
+#question-box {
+  margin: 120px auto 40px;
+  width: 80%;
+  padding: 20px;
+  border: 3px solid gold;
+  border-radius: 16px;
+  text-align: center;
+  font-size: 34px;
+  background: rgba(0,0,0,0.4);
 }
 
+/* ===== ANSWERS GRID ===== */
+#answers {
+  width: 85%;
+  margin: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* ===== ANSWER ===== */
 .answer {
-  border: 2px solid gold;
-  margin: 12px auto;
-  padding: 14px;
-  width: 60%;
-  font-size: 24px;
+  display: flex;
+  align-items: center;
+  border: 3px solid gold;
+  border-radius: 14px;
+  padding: 16px 20px;
+  font-size: 26px;
+  background: rgba(0,0,0,0.45);
+  transition: transform 0.2s ease, background 0.2s ease;
 }
 
+.answer span {
+  font-weight: bold;
+  color: gold;
+  margin-right: 14px;
+}
+
+.answer.active {
+  background: linear-gradient(135deg, #d4af37, #ffec8b);
+  color: #081c3a;
+  transform: scale(1.02);
+}
+
+/* ===== STATUS ===== */
 #status {
-  margin-top: 20px;
-  font-size: 22px;
+  margin-top: 30px;
+  text-align: center;
+  font-size: 24px;
+  color: gold;
 }
 
+/* ===== SCORES ===== */
 #scores {
-  margin-top: 20px;
+  position: fixed;
+  bottom: 20px;
+  right: 30px;
   list-style: none;
   padding: 0;
+  font-size: 18px;
+}
+
+#scores li {
+  margin-bottom: 6px;
 }
 </style>
 </head>
@@ -51,42 +95,59 @@ body {
 
 <img id="tv-logo" src="logo.png" alt="Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ">
 
-<h1 id="question"></h1>
-<div id="answers"></div>
+<div id="question-box">Περιμένουμε την ερώτηση…</div>
+
+<div id="answers">
+  <div class="answer" id="a0"><span>Α.</span><div></div></div>
+  <div class="answer" id="a1"><span>Β.</span><div></div></div>
+  <div class="answer" id="a2"><span>Γ.</span><div></div></div>
+  <div class="answer" id="a3"><span>Δ.</span><div></div></div>
+</div>
+
 <div id="status"></div>
 <ul id="scores"></ul>
 
 <script>
 const ws = new WebSocket(
-  (location.protocol==="https:"?"wss://":"ws://")+location.host
+  (location.protocol === "https:" ? "wss://" : "ws://") + location.host
 );
 
 ws.onmessage = e => {
   const d = JSON.parse(e.data);
 
+  /* ΝΕΑ ΕΡΩΤΗΣΗ */
   if (d.type === "question") {
-    question.textContent = d.question.text;
-    answers.innerHTML = "";
-    d.question.answers.forEach(a => {
-      const div = document.createElement("div");
-      div.className = "answer";
-      div.textContent = a;
-      answers.appendChild(div);
+    document.getElementById("question-box").textContent = d.question.text;
+    document.getElementById("status").textContent = "Απαντούν οι παίκτες…";
+
+    d.question.answers.forEach((ans, i) => {
+      const el = document.getElementById("a" + i);
+      el.classList.remove("active");
+      el.querySelector("div").textContent = ans;
     });
-    status.textContent = "Απαντούν…";
   }
 
+  /* ΠΙΟ ΓΡΗΓΟΡΟΣ */
   if (d.type === "winner") {
-    status.textContent = "Πιο γρήγορος: " + d.name;
+    document.getElementById("status").textContent =
+      "Πιο γρήγορος: " + d.name;
   }
 
+  /* SCOREBOARD */
   if (d.type === "players") {
-    scores.innerHTML = "";
+    const ul = document.getElementById("scores");
+    ul.innerHTML = "";
     d.players.forEach(p => {
       const li = document.createElement("li");
       li.textContent = `${p.name}: ${p.score}`;
-      scores.appendChild(li);
+      ul.appendChild(li);
     });
+  }
+
+  /* ΤΕΛΟΣ */
+  if (d.type === "end") {
+    document.getElementById("status").textContent =
+      "ΤΕΛΟΣ ΠΑΙΧΝΙΔΙΟΥ";
   }
 };
 </script>
