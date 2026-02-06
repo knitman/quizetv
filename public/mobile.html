@@ -17,7 +17,6 @@ body {
   color: gold;
   font-family: Arial, sans-serif;
   text-align: center;
-  overflow: hidden;
 }
 
 .screen {
@@ -27,18 +26,16 @@ body {
   flex-direction:column;
   justify-content:center;
   align-items:center;
-  transition: transform 0.8s cubic-bezier(.22,1.2,.36,1), opacity 0.6s ease;
 }
 
 .hidden {
-  opacity:0;
-  pointer-events:none;
-  transform: translateY(80px) scale(0.85);
+  display:none;
 }
 
-#logo {
-  width:220px;
-  margin-bottom:20px;
+#icon {
+  width:140px;
+  margin-bottom:24px;
+  filter: drop-shadow(0 0 20px rgba(255,215,0,0.35));
 }
 
 input {
@@ -59,7 +56,6 @@ button {
   cursor:pointer;
   background: linear-gradient(135deg, gold, #ffec8b);
   color:#081c3a;
-  box-shadow:0 10px 30px rgba(255,215,0,0.45);
 }
 
 .answers {
@@ -81,17 +77,15 @@ button {
 
 <body>
 
-<!-- JOIN -->
 <div id="joinScreen" class="screen">
-  <img id="logo" src="logo.png" alt="Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ">
+  <img id="icon" src="icon.png" alt="Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ">
   <p>Γράψε το όνομά σου</p>
   <input id="name" placeholder="Όνομα παίκτη">
   <button onclick="join()">ΜΠΕΣ</button>
 </div>
 
-<!-- GAME -->
 <div id="gameScreen" class="screen hidden">
-  <img id="logo" src="logo.png" alt="Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ">
+  <img id="icon" src="icon.png" alt="Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ">
   <div class="answers">
     <button onclick="send(0)">🅰 Α</button>
     <button onclick="send(1)">🅱 Β</button>
