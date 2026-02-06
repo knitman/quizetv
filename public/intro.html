@@ -3,102 +3,75 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ – Έναρξη</title>
+<title>Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ</title>
 
 <style>
-/* ====== BASE ====== */
-body {
-  margin: 0;
+html, body {
+  width:100%;
+  height:100%;
+  margin:0;
   background: radial-gradient(circle at top, #0b2c5d, #020b1c);
   color: gold;
   font-family: Arial, sans-serif;
   text-align: center;
-  overflow: hidden;
 }
 
-/* ====== TITLE ====== */
 h1 {
+  display:none; /* δεν το χρειαζόμαστε, έχουμε logo */
+}
+
+#logo {
+  width: 320px;
   margin-top: 30px;
-  font-size: 42px;
-  letter-spacing: 2px;
-  animation: titleGlow 2.5s infinite ease-in-out;
+  animation: logoIn 1.2s cubic-bezier(.22,1.28,.36,1);
 }
 
-@keyframes titleGlow {
-  0%   { text-shadow: 0 0 10px gold; }
-  50%  { text-shadow: 0 0 30px gold; }
-  100% { text-shadow: 0 0 10px gold; }
+@keyframes logoIn {
+  from { opacity:0; transform: translateY(40px) scale(0.8); }
+  to   { opacity:1; transform: translateY(0) scale(1); }
 }
 
-/* ====== QR CONTAINER ====== */
 #qr-wrapper {
-  width: 260px;
-  height: 260px;
-  margin: 40px auto 20px;
-  border-radius: 50%;
+  width:260px;
+  height:260px;
+  margin:40px auto 20px;
+  border-radius:50%;
   background: rgba(255,215,0,0.08);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: floatIn 1.2s cubic-bezier(.22,1.28,.36,1);
-}
-
-@keyframes floatIn {
-  0% {
-    opacity: 0;
-    transform: translateY(80px) scale(0.6);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
 #qr {
-  width: 200px;
-  height: 200px;
-  border-radius: 20px;
-  background: #fff;
+  width:200px;
+  height:200px;
+  background:#fff;
+  border-radius:20px;
 }
 
-/* ====== PLAYERS ====== */
 #players {
-  margin-top: 10px;
-  min-height: 28px;
-  font-size: 18px;
-  opacity: 0;
-  transition: opacity 0.5s ease;
+  margin-top:10px;
+  font-size:18px;
+  opacity:0.85;
 }
 
-#players.show {
-  opacity: 1;
-}
-
-/* ====== START BUTTON ====== */
 #start {
-  margin-top: 30px;
-  font-size: 22px;
-  padding: 16px 46px;
-  border: none;
-  border-radius: 40px;
-  cursor: pointer;
+  margin-top:30px;
+  font-size:22px;
+  padding:16px 46px;
+  border:none;
+  border-radius:40px;
+  cursor:pointer;
   background: linear-gradient(135deg, gold, #ffec8b);
-  color: #081c3a;
-  box-shadow: 0 10px 30px rgba(255,215,0,0.4);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-#start:hover {
-  transform: scale(1.05);
-  box-shadow: 0 15px 40px rgba(255,215,0,0.6);
+  color:#081c3a;
+  box-shadow:0 10px 30px rgba(255,215,0,0.4);
 }
 </style>
 </head>
 
 <body>
 
-<h1>Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ</h1>
-<p>Σκάναρε το QR για να μπεις στο παιχνίδι</p>
+<img id="logo" src="logo.png" alt="Η ΓΝΩΣΗ ΕΙΝΑΙ ΝΙΚΗ">
 
 <div id="qr-wrapper">
   <img id="qr" alt="QR Code">
@@ -110,31 +83,25 @@ h1 {
 
 <script>
 const ws = new WebSocket(
-  (location.protocol === "https:" ? "wss://" : "ws://") + location.host
+  (location.protocol==="https:"?"wss://":"ws://")+location.host
 );
 
 ws.onmessage = e => {
-  const data = JSON.parse(e.data);
+  const d = JSON.parse(e.data);
 
-  if (data.type === "qr") {
-    document.getElementById("qr").src = data.qr;
+  if (d.type === "qr") {
+    document.getElementById("qr").src = d.qr;
   }
 
-  if (data.type === "players") {
-    const p = document.getElementById("players");
-    if (data.players.length > 0) {
-      p.textContent =
-        "Παίκτες: " + data.players.map(pl => pl.name).join(" • ");
-      p.classList.add("show");
-    }
+  if (d.type === "players") {
+    document.getElementById("players").textContent =
+      "Παίκτες: " + d.players.map(p => p.name).join(" • ");
   }
 };
 
 document.getElementById("start").onclick = () => {
-  ws.send(JSON.stringify({ type: "admin_start" }));
-  setTimeout(() => {
-    window.location.href = "/tv.html";
-  }, 300);
+  ws.send(JSON.stringify({ type:"admin_start" }));
+  setTimeout(()=>location.href="/tv.html",300);
 };
 </script>
 
