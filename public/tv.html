@@ -13,14 +13,16 @@ body {
   text-align:center;
 }
 
+/* ===== LOGO ===== */
 #tv-logo {
   width:200px;
-  margin:20px auto;
+  margin:20px auto 10px;
 }
 
+/* ===== QUESTION ===== */
 #question-box {
   width:80%;
-  margin:20px auto;
+  margin:0 auto 30px;
   padding:20px;
   border:3px solid gold;
   border-radius:16px;
@@ -28,6 +30,7 @@ body {
   background:rgba(0,0,0,0.45);
 }
 
+/* ===== ANSWERS ===== */
 #answers {
   width:85%;
   margin:auto;
@@ -37,44 +40,81 @@ body {
 }
 
 .answer {
+  display:flex;
+  align-items:center;
   border:3px solid gold;
   border-radius:14px;
-  padding:16px;
+  padding:16px 20px;
   font-size:26px;
   background:rgba(0,0,0,0.5);
+  transition:all 0.4s ease;
 }
 
+.answer span {
+  font-weight:bold;
+  color:gold;
+  margin-right:14px;
+}
+
+/* LIVE */
 .answer.live {
   background: linear-gradient(135deg, #d4af37, #ffec8b);
   color:#081c3a;
 }
 
+/* REVEAL */
+.answer.correct {
+  background: linear-gradient(135deg, #1fbf4a, #7dff9a);
+  color:#021b0a;
+  transform: scale(1.05);
+}
+
+.answer.wrong {
+  background: linear-gradient(135deg, #b00020, #ff6b6b);
+  color:white;
+  opacity:0.6;
+}
+
+/* ===== STATUS ===== */
 #status {
-  margin-top:20px;
+  margin-top:25px;
   font-size:24px;
   color:gold;
 }
 
+/* ===== SCORES ===== */
 #scores {
+  margin-top:20px;
   list-style:none;
   padding:0;
   font-size:18px;
 }
 
-#start {
-  margin-top:20px;
-  font-size:22px;
-  padding:14px 40px;
-  border:none;
-  border-radius:30px;
-  cursor:pointer;
-  background:#666;
-  color:#222;
+/* ===== FINAL SCREEN ===== */
+#final {
+  position:fixed;
+  inset:0;
+  background: radial-gradient(circle at top, #0b2c5d, #020b1c);
+  display:none;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
 }
 
-#start.enabled {
-  background: gold;
-  color:#081c3a;
+#final h1 {
+  font-size:48px;
+  margin-bottom:30px;
+  color:gold;
+}
+
+#final ul {
+  list-style:none;
+  padding:0;
+  font-size:32px;
+}
+
+#final li {
+  margin:12px 0;
 }
 </style>
 </head>
@@ -86,67 +126,100 @@ body {
 <div id="question-box">Περιμένουμε παίκτες…</div>
 
 <div id="answers">
-  <div class="answer" id="a0">Α.</div>
-  <div class="answer" id="a1">Β.</div>
-  <div class="answer" id="a2">Γ.</div>
-  <div class="answer" id="a3">Δ.</div>
+  <div class="answer" id="a0"><span>Α.</span><div></div></div>
+  <div class="answer" id="a1"><span>Β.</span><div></div></div>
+  <div class="answer" id="a2"><span>Γ.</span><div></div></div>
+  <div class="answer" id="a3"><span>Δ.</span><div></div></div>
 </div>
 
 <div id="status"></div>
-
 <ul id="scores"></ul>
 
-<button id="start">START</button>
+<!-- FINAL SCOREBOARD -->
+<div id="final">
+  <h1>ΤΕΛΙΚΗ ΚΑΤΑΤΑΞΗ</h1>
+  <ul id="finalScores"></ul>
+</div>
 
 <script>
 const ws = new WebSocket(
   (location.protocol==="https:"?"wss://":"ws://")+location.host
 );
 
-let canStart=false;
+let lastCorrect = null;
 
-ws.onmessage=e=>{
-  const d=JSON.parse(e.data);
+ws.onmessage = e => {
+  const d = JSON.parse(e.data);
 
-  if(d.type==="players"){
-    scores.innerHTML="";
-    canStart = d.players.length>0 && d.players.every(p=>p.ready);
-
-    d.players.forEach(p=>{
-      const li=document.createElement("li");
-      li.textContent=`${p.ready?"✔":"…"} ${p.name}`;
+  /* PLAYERS */
+  if (d.type === "players") {
+    scores.innerHTML = "";
+    d.players.forEach(p => {
+      const li = document.createElement("li");
+      li.textContent = `${p.ready?"✔":"…"} ${p.name}: ${p.score}`;
       scores.appendChild(li);
     });
-
-    start.className = canStart ? "enabled" : "";
-    status.textContent = canStart
-      ? "Όλοι έτοιμοι!"
-      : "Περιμένουμε να είναι όλοι έτοιμοι…";
   }
 
-  if(d.type==="countdown"){
-    status.textContent="Ξεκινά σε "+d.seconds;
+  /* COUNTDOWN */
+  if (d.type === "countdown") {
+    status.textContent = "Ξεκινά σε " + d.seconds;
   }
 
-  if(d.type==="question"){
-    questionBox.textContent=d.question.text;
-    d.question.answers.forEach((a,i)=>{
+  /* QUESTION */
+  if (d.type === "question") {
+    questionBox.textContent = d.question.text;
+    status.textContent = "Απαντούν οι παίκτες…";
+    lastCorrect = null;
+
+    d.question.answers.forEach((ans,i)=>{
       const el=document.getElementById("a"+i);
-      el.textContent=["Α.","Β.","Γ.","Δ."][i]+" "+a;
-      el.classList.remove("live");
+      el.className="answer";
+      el.querySelector("div").textContent=ans;
     });
   }
 
-  if(d.type==="answer_live"){
+  /* LIVE ANSWER */
+  if (d.type === "answer_live") {
     document.getElementById("a"+d.answer).classList.add("live");
+  }
+
+  /* WINNER + CORRECT */
+  if (d.type === "winner") {
+    lastCorrect = d.correct;
+    status.textContent = "Πιο γρήγορος: " + d.name;
+
+    // reveal μετά από λίγο
+    setTimeout(revealCorrect, 1000);
+  }
+
+  /* END GAME */
+  if (d.type === "end") {
+    showFinal(d.players);
   }
 };
 
-start.onclick=()=>{
-  if(canStart){
-    ws.send(JSON.stringify({type:"admin_start"}));
+function revealCorrect(){
+  for(let i=0;i<4;i++){
+    const el=document.getElementById("a"+i);
+    el.classList.remove("live");
+    el.classList.add(i===lastCorrect?"correct":"wrong");
   }
-};
+}
+
+function showFinal(players){
+  document.getElementById("final").style.display="flex";
+  const ul=document.getElementById("finalScores");
+  ul.innerHTML="";
+
+  players
+    .sort((a,b)=>b.score-a.score)
+    .forEach((p,i)=>{
+      const li=document.createElement("li");
+      li.textContent = `${i===0?"🏆 ":""}${p.name} – ${p.score}`;
+      ul.appendChild(li);
+    });
+}
 </script>
 
 </body>
