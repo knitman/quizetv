@@ -41,6 +41,7 @@ button {
 <div id="readyScreen" class="screen hidden">
   <img id="icon" src="icon.png">
   <button onclick="ready()">ΕΤΟΙΜΟΣ</button>
+  <div id="status"></div>
 </div>
 
 <div id="gameScreen" class="screen hidden">
@@ -48,50 +49,70 @@ button {
   <button onclick="send(1)">🅱 Β</button>
   <button onclick="send(2)">🅲 Γ</button>
   <button onclick="send(3)">🅳 Δ</button>
-  <div id="status"></div>
+  <div id="statusGame"></div>
 </div>
 
 <script>
-const ws = new WebSocket(
-  (location.protocol==="https:"?"wss://":"ws://")+location.host
-);
-
+let ws;
+let socketReady = false;
+let pendingReady = false;
 let answered = false;
 
+function connectWS() {
+  ws = new WebSocket(
+    (location.protocol==="https:"?"wss://":"ws://")+location.host
+  );
+
+  ws.onopen = () => {
+    socketReady = true;
+    if (pendingReady) {
+      ws.send(JSON.stringify({ type:"ready" }));
+      pendingReady = false;
+    }
+  };
+
+  ws.onmessage = e => {
+    const d = JSON.parse(e.data);
+    if (d.type === "question") {
+      answered = false;
+      statusGame.textContent = "ΑΠΑΝΤΗΣΕ ΤΩΡΑ!";
+    }
+    if (d.type === "countdown") {
+      status.textContent = "Ξεκινά σε " + d.seconds;
+    }
+  };
+}
+
+connectWS();
+
 function join(){
-  const name=document.getElementById("name").value.trim();
+  const name = document.getElementById("name").value.trim();
   if(!name) return alert("Βάλε όνομα");
-  ws.send(JSON.stringify({type:"join",name}));
+
+  ws.send(JSON.stringify({ type:"join", name }));
   joinScreen.classList.add("hidden");
   readyScreen.classList.remove("hidden");
 }
 
 function ready(){
-  ws.send(JSON.stringify({type:"ready"}));
+  if (!socketReady) {
+    pendingReady = true;
+    status.textContent = "Συνδέεται…";
+    return;
+  }
+
+  ws.send(JSON.stringify({ type:"ready" }));
   readyScreen.classList.add("hidden");
   gameScreen.classList.remove("hidden");
-  status.textContent="Περιμένουμε...";
+  statusGame.textContent = "Περιμένουμε να ξεκινήσει…";
 }
 
 function send(a){
   if(answered) return;
   answered = true;
-  ws.send(JSON.stringify({type:"answer",answer:a}));
-  status.textContent="Απάντηση στάλθηκε ✓";
+  ws.send(JSON.stringify({ type:"answer", answer:a }));
+  statusGame.textContent = "Απάντηση στάλθηκε ✓";
 }
-
-ws.onmessage=e=>{
-  const d=JSON.parse(e.data);
-
-  if(d.type==="countdown"){
-    status.textContent="Ξεκινά σε "+d.seconds;
-  }
-
-  if(d.type==="question"){
-    answered = false;               // 🔥 reset για ΝΕΑ ερώτηση
-    status.textContent="ΑΠΑΝΤΗΣΕ ΤΩΡΑ!";
-  }
-};
 </script>
 
 </body>
